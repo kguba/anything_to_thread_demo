@@ -1,6 +1,6 @@
 # Anything To Thread
 
-Ein YouTube Video Summarizer, der Videos in Text zusammenfasst.
+Ein YouTube Video Summarizer, der Videos in Text zusammenfasst und automatisch virale X (Twitter) Threads erstellt.
 
 ## Setup
 
@@ -43,5 +43,5 @@ streamlit run main.py
 
 1. Öffnen Sie die App in Ihrem Browser (normalerweise unter http://localhost:8501)
 2. Fügen Sie die URL eines YouTube-Videos ein
-3. Warten Sie auf die Zusammenfassung
-4. Optional: Laden Sie die Zusammenfassung als Textdatei herunter 
+3. Warten Sie auf die Zusammenfassung und den generierten Thread
+4. Optional: Laden Sie beides als Textdatei herunter
