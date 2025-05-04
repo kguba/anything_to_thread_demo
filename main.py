@@ -10,9 +10,9 @@ from dotenv import load_dotenv
 from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
 
-# Initialize session state for animation
-if 'animation_running' not in st.session_state:
-    st.session_state.animation_running = False
+# Initialize session state for language
+if 'selected_language' not in st.session_state:
+    st.session_state.selected_language = 'en'
 
 # Lade Umgebungsvariablen
 load_dotenv()
@@ -21,33 +21,42 @@ st.title("🧵 Anything To Thread")
 
 # Füge Abstand hinzu
 st.write("")
+st.write("")
 
 st.write("Ever wanted to create a thread from a YouTube video? Now you can!")
 st.write("Just paste ur openai key and paste the youtube url and let the magic happen.")
 
+
+
+
 # Füge Divider hinzu
 st.divider()
+
 
 # URL Eingabe
 video_url = st.text_input("Enter YouTube Video URL:")
 st.write("")
 openai_key_input = st.text_input("Enter Your OpenAI Key:")
 st.write("")
-
-# Create container for button and time estimate
+# Language selection buttons
+col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
+with col1:
+    st.write("Thread language:", unsafe_allow_html=True)
+with col2:
+    if st.button("🇺🇸", use_container_width=True):
+        st.session_state.selected_language = 'en'
+with col3:
+    if st.button("🇩🇪", use_container_width=True):
+        st.session_state.selected_language = 'de'
+with col4:
+    if st.button("🇪🇸", use_container_width=True):
+        st.session_state.selected_language = 'es'
+st.write("")
+# Create container for button
 button_container = st.container()
 
-# Create two columns for the submit button and time estimate
-col1, col2 = st.columns([1, 4])
-
 with button_container:
-    with col1:
-        submit_button = st.button("Submit")
-
-    with col2:
-        time_text = st.markdown("", unsafe_allow_html=True)
-        if submit_button and video_url:
-            time_text.markdown("<div style='margin-top: 8px; text-align: right;'>Estimated time: Calculating...</div>", unsafe_allow_html=True)
+    submit_button = st.button("Submit")
 
 # Füge Divider hinzu
 st.divider()
@@ -57,20 +66,41 @@ st.write("")
 
 if submit_button and video_url:
     try:
+        # Validate URL
+        if not video_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
+            st.error("Please enter a valid YouTube URL")
+            st.stop()
+
         # Load Transcript
         with st.spinner("Loading video transcript..."):
-            loader = YoutubeLoader.from_youtube_url(video_url, language=["en", "en-US", "de", "de-DE"])
-            transcript = loader.load()
+            try:
+                loader = YoutubeLoader.from_youtube_url(
+                    video_url,
+                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"]
+                )
+                transcript = loader.load()
+                
+                if not transcript:
+                    st.error("Could not load transcript. The video might not have captions available.")
+                    st.stop()
+                    
+            except Exception as e:
+                st.error(f"Error loading transcript: {str(e)}")
+                st.stop()
 
         # Split Transcript with smaller chunks
         with st.spinner("Splitting transcript into chunks..."):
-            splitter = TokenTextSplitter(model_name="gpt-4", chunk_size=500, chunk_overlap=50)
+            splitter = TokenTextSplitter(chunk_size=500, chunk_overlap=50)
             chunks = splitter.split_documents(transcript)
             total_chunks = len(chunks)
 
+            if not chunks:
+                st.error("Could not process the transcript. Please try a different video.")
+                st.stop()
+
         # Set up LLM
         llm = ChatOpenAI(
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            openai_api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
             model="gpt-4",
             temperature=0.3
         )
@@ -79,10 +109,6 @@ if submit_button and video_url:
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        # Initialize time tracking
-        start_time = time.time()
-        chunk_times = []
-
         # System Prompt für die Thread-Erstellung
         system_prompt = """You are an expert at creating viral X (Twitter) threads that engage and inform your audience.
 Your task is to create a compelling thread based on the summary of a YouTube video.
@@ -114,6 +140,9 @@ Thread Requirements:
    - Make complex ideas accessible
    - Create a narrative flow between tweets
 
+5. Language:
+   - Create the thread in {language}
+
 Here is the summary of the video:
 {summary}
 
@@ -126,8 +155,6 @@ Create a thread that makes people want to watch the video while providing genuin
             
             # Process chunks with progress updates
             for i, chunk in enumerate(chunks):
-                chunk_start_time = time.time()
-                
                 # Update progress
                 progress = (i + 1) / total_chunks
                 progress_bar.progress(progress)
@@ -142,33 +169,30 @@ Create a thread that makes people want to watch the video while providing genuin
                     # Create a new document with the previous summary
                     summary_doc = Document(page_content=summary)
                     summary = summarize_chain.run([chunk, summary_doc])
-                
-                # Calculate time for this chunk
-                chunk_time = time.time() - chunk_start_time
-                chunk_times.append(chunk_time)
-                
-                # Calculate average time per chunk and estimate remaining time
-                avg_chunk_time = sum(chunk_times) / len(chunk_times)
-                remaining_chunks = total_chunks - (i + 1)
-                estimated_remaining_time = avg_chunk_time * remaining_chunks
-                
-                # Update time estimate
-                with col2:
-                    time_text.markdown(f"<div style='margin-top: 8px; text-align: right;'>Estimated time: {int(estimated_remaining_time)} seconds remaining</div>", unsafe_allow_html=True)
 
             # Thread-Erstellung mit dem System-Prompt
             prompt = PromptTemplate(
-                input_variables=["summary", "url"],
+                input_variables=["summary", "url", "language"],
                 template=system_prompt
             )
             
-            thread_prompt = prompt.format(summary=summary, url=video_url)
+            # Set language for output
+            output_language = {
+                'en': "English",
+                'de': "German",
+                'es': "Spanish"
+            }.get(st.session_state.selected_language, "English")
+            
+            thread_prompt = prompt.format(
+                summary=summary, 
+                url=video_url,
+                language=output_language
+            )
             thread = llm.predict(thread_prompt)
 
             # Clear progress indicators
             progress_bar.empty()
             status_text.empty()
-            time_text.empty()
 
             # Display summary and thread
             st.subheader("Summary")
