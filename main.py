@@ -121,7 +121,7 @@ if submit_button and video_url:
         # Set up LLM
         llm = ChatOpenAI(
             openai_api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
-            model="gpt-4",
+            model="gpt-4o-mini",
             temperature=0.3
         )
 
@@ -161,6 +161,7 @@ First, provide a concise summary of the video in 2-3 sentences. Then create the 
 Thread Requirements:
 1. Structure:
    - First tweet: Start with a powerful hook or thought-provoking question, end with "…🧵"
+   - First tweet: Doesnt have a number in the beginning
    - Second tweet onwards: Number them (2/5), (3/5), etc.
    - Last tweet: Strong call-to-action and video URL: {url}
 
@@ -184,7 +185,7 @@ Thread Requirements:
    - Include specific examples and data points
    - Make complex ideas accessible
    - Create a narrative flow between tweets
-   - Write from the YouTuber's perspective
+   - Dont write "the person", "write the youtuber"
 
 5. Language:
    - Create the thread in {language}
