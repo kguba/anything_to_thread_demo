@@ -1,47 +1,53 @@
-# Anything To Thread
+# Anything to Thread
 
-Ein YouTube Video Summarizer, der Videos in Text zusammenfasst und automatisch virale X (Twitter) Threads erstellt.
+Convert YouTube videos into engaging X (Twitter) threads with AI. This tool uses OpenAI's GPT-4 to analyze video transcripts and create viral-worthy threads.
+
+## Features
+
+- YouTube video URL input
+- Automatic transcript extraction
+- AI-powered summary generation
+- Thread creation with proper formatting
+- Progress tracking and time estimation
+- Download option for summary and thread
 
 ## Setup
 
-1. Klonen Sie das Repository:
+1. Clone the repository:
 ```bash
-git clone https://github.com/kguba/anything_to_thread.git
-cd anything_to_thread
+git clone https://github.com/yourusername/anything-to-thread.git
+cd anything-to-thread
 ```
 
-2. Erstellen Sie eine virtuelle Umgebung und aktivieren Sie sie:
-```bash
-python -m venv venv
-source venv/bin/activate  # Für Unix/MacOS
-# oder
-.\venv\Scripts\activate  # Für Windows
-```
-
-3. Installieren Sie die Abhängigkeiten:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Erstellen Sie eine `.env` Datei im Hauptverzeichnis und fügen Sie Ihren OpenAI API-Key hinzu:
+3. Create a `.env` file in the project root and add your OpenAI API key:
 ```
 OPENAI_API_KEY=your_api_key_here
 ```
 
-5. Starten Sie die App:
+4. Run the application:
 ```bash
 streamlit run main.py
 ```
 
-## Sicherheit
+## Usage
 
-- Der OpenAI API-Key wird aus der Umgebungsvariable geladen und ist nicht im Code gespeichert
-- Die `.env` Datei ist in `.gitignore` aufgenommen und wird nicht ins Repository hochgeladen
-- Stellen Sie sicher, dass Sie Ihre `.env` Datei niemals teilen oder ins Repository pushen
+1. Enter your OpenAI API key
+2. Paste a YouTube video URL
+3. Click "Submit"
+4. Wait for the processing to complete
+5. View and download the generated summary and thread
 
-## Verwendung
+## Requirements
 
-1. Öffnen Sie die App in Ihrem Browser (normalerweise unter http://localhost:8501)
-2. Fügen Sie die URL eines YouTube-Videos ein
-3. Warten Sie auf die Zusammenfassung und den generierten Thread
-4. Optional: Laden Sie beides als Textdatei herunter
+- Python 3.8+
+- OpenAI API key
+- Internet connection for YouTube video access
+
+## License
+
+MIT License
