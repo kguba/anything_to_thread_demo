@@ -9,6 +9,7 @@ from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
+from chuck_norris_jokes import get_random_joke
 
 # Initialize session state for language
 if 'selected_language' not in st.session_state:
@@ -149,7 +150,7 @@ Here is the summary of the video:
 Create a thread that makes people want to watch the video while providing genuine value."""
 
         # Summarize
-        with st.spinner("Generating summary and thread..."):
+        with st.spinner(get_random_joke()):
             # Erste Zusammenfassung
             summarize_chain = load_summarize_chain(llm=llm, chain_type="refine", verbose=True)
             
