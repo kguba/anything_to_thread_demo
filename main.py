@@ -94,12 +94,8 @@ st.write("")
 st.write("Ever wanted to create a thread from a YouTube video? Now you can!")
 st.write("Simply enter your OpenAI key and the YouTube URL—then sit back and let the magic happen.")
 
-
-
-
 # Füge Divider hinzu
 st.divider()
-
 
 # URL Eingabe
 video_url = st.text_input("Enter YouTube Video URL:").strip()
@@ -143,12 +139,6 @@ with button_container:
 # Füge Divider hinzu
 st.divider()
 st.write("")
-
-#button(username="kguba", floating=False, width=221)
-
-# Remove the request counter display
-# total_remaining, hourly_remaining = get_remaining_requests()
-# st.info(f"Remaining requests: {total_remaining} total, {hourly_remaining} in the next hour")
 
 if submit_button and video_url:
     if not check_request_limit():
@@ -203,9 +193,10 @@ if submit_button and video_url:
 
         # Set up LLM
         llm = ChatOpenAI(
-            api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
-            model_name="gpt-4",
-            temperature=0.3
+            openai_api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
+            model="gpt-4",
+            temperature=0.3,
+            request_timeout=120
         )
 
         # Create progress bar
