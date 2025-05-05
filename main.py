@@ -260,21 +260,38 @@ Here is the summary of the video:
             tweets = []
             current_tweet = ""
             
-            for line in thread_part.split('\n'):
-                line = line.strip()
-                if line:  # Skip empty lines
-                    if line.startswith(('1/', '2/', '3/', '4/', '5/', '6/', '7/', '8/', '9/', '10/')):
-                        if current_tweet:  # Save previous tweet if exists
-                            tweets.append(current_tweet.strip())
-                        current_tweet = line
-                    else:
-                        current_tweet += " " + line
+            # First, split by newlines and clean up
+            lines = [line.strip() for line in thread_part.split('\n') if line.strip()]
             
-            if current_tweet:  # Add the last tweet
+            for line in lines:
+                # Check if this line starts a new tweet (either with a number or is the first tweet)
+                if (line.startswith(('1/', '2/', '3/', '4/', '5/', '6/', '7/', '8/', '9/', '10/')) or 
+                    (not current_tweet and not any(line.startswith(str(i)+'/') for i in range(1, 11)))):
+                    # Save previous tweet if exists
+                    if current_tweet:
+                        tweets.append(current_tweet.strip())
+                    current_tweet = line
+                else:
+                    # Continue with current tweet
+                    current_tweet += " " + line
+            
+            # Add the last tweet if exists
+            if current_tweet:
                 tweets.append(current_tweet.strip())
             
-        except:
+            # Clean up tweets (remove numbering from the beginning)
+            cleaned_tweets = []
+            for tweet in tweets:
+                # Remove numbering pattern like "1/5", "2/5", etc.
+                if any(tweet.startswith(f"{i}/") for i in range(1, 11)):
+                    tweet = ' '.join(tweet.split(' ')[1:])
+                cleaned_tweets.append(tweet.strip())
+            
+            tweets = cleaned_tweets
+            
+        except Exception as e:
             # Fallback if the format is not as expected
+            st.error(f"Error processing thread format: {str(e)}")
             summary_part = summary
             tweets = [thread_part]
 
@@ -291,14 +308,9 @@ Here is the summary of the video:
         # Display each tweet
         st.subheader("Generated Thread")
         for i, tweet in enumerate(tweets):
-            # Remove the numbering from the tweet text
-            tweet_text = tweet
-            if tweet.startswith(('1/', '2/', '3/', '4/', '5/', '6/', '7/', '8/', '9/', '10/')):
-                tweet_text = ' '.join(tweet.split(' ')[1:])
-            
             # Calculate appropriate height based on tweet length
             # Assuming average of 50 characters per line and 20px per line
-            num_lines = len(tweet_text) // 50 + 1
+            num_lines = len(tweet) // 50 + 1
             height = max(68, min(200, num_lines * 20))  # Min 68px (Streamlit requirement), max 200px
             
             # Display tweet number and content
@@ -307,7 +319,7 @@ Here is the summary of the video:
             else:
                 st.markdown(f"**Tweet {i+1}:**")
             
-            st.text_area("", tweet_text, key=f"tweet_{i}", disabled=True, height=height)
+            st.text_area("", tweet, key=f"tweet_{i}", disabled=True, height=height)
             st.write("")  # Add spacing between tweets
 
         st.write("")
