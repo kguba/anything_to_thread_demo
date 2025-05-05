@@ -2,6 +2,8 @@ import streamlit as st
 import os
 import time
 import pyperclip
+import json
+from datetime import datetime, timedelta
 from langchain_community.document_loaders import YoutubeLoader
 from langchain.chains.summarize import load_summarize_chain
 from langchain.chat_models import ChatOpenAI
@@ -11,12 +13,67 @@ from dotenv import load_dotenv
 from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
 from chuck_norris_jokes import get_random_joke
+import requests
 
-# Initialize session state for language and used jokes
+# Initialize session state for language, used jokes, and request tracking
 if 'selected_language' not in st.session_state:
     st.session_state.selected_language = 'en'
 if 'used_jokes' not in st.session_state:
     st.session_state.used_jokes = set()
+
+# Constants for request limiting
+REQUESTS_FILE = 'user_requests.json'
+MAX_REQUESTS = 5
+
+def load_user_requests():
+    try:
+        if os.path.exists(REQUESTS_FILE):
+            with open(REQUESTS_FILE, 'r') as f:
+                data = json.load(f)
+                # Convert any old format data to new format
+                for ip in data:
+                    if isinstance(data[ip], dict):
+                        data[ip] = 0
+                return data
+        return {}
+    except Exception as e:
+        st.error(f"Error loading request data: {str(e)}")
+        return {}
+
+def save_user_requests(requests_data):
+    try:
+        with open(REQUESTS_FILE, 'w') as f:
+            json.dump(requests_data, f)
+    except Exception as e:
+        st.error(f"Error saving request data: {str(e)}")
+
+def get_user_ip():
+    try:
+        response = requests.get('https://api.ipify.org?format=json', timeout=5)
+        return response.json()['ip']
+    except Exception as e:
+        st.warning("Could not determine IP address. Using session ID instead.")
+        return f"session_{st.session_state.get('_session_id', 'unknown')}"
+
+def check_request_limit():
+    user_ip = get_user_ip()
+    requests_data = load_user_requests()
+    
+    if user_ip not in requests_data:
+        requests_data[user_ip] = 0
+        save_user_requests(requests_data)
+    
+    return int(requests_data[user_ip]) < MAX_REQUESTS
+
+def increment_request_count():
+    user_ip = get_user_ip()
+    requests_data = load_user_requests()
+    
+    if user_ip not in requests_data:
+        requests_data[user_ip] = 0
+    
+    requests_data[user_ip] = int(requests_data[user_ip]) + 1
+    save_user_requests(requests_data)
 
 def get_unique_joke():
     joke = get_random_joke()
@@ -35,7 +92,7 @@ st.write("")
 st.write("")
 
 st.write("Ever wanted to create a thread from a YouTube video? Now you can!")
-st.write("Just paste ur openai key and paste the youtube url and let the magic happen.")
+st.write("Simply enter your OpenAI key and the YouTube URL—then sit back and let the magic happen.")
 
 
 
@@ -45,11 +102,16 @@ st.divider()
 
 
 # URL Eingabe
-video_url = st.text_input("Enter YouTube Video URL:")
+video_url = st.text_input("Enter YouTube Video URL:").strip()
 st.write("")
-openai_key_input = st.text_input("Enter Your OpenAI Key:")
+openai_key_input = st.text_input("Enter Your OpenAI Key:", disabled=True, type="password")
 st.write("")
 st.write("")
+st.write("")
+st.warning("🚨 Up to 5 requests are free for demo purposes. For more, please clone the repo and use your own OpenAI API key.")
+st.write("")
+st.write("")
+
 # Language selection buttons
 col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 with col1:
@@ -84,12 +146,33 @@ st.write("")
 
 #button(username="kguba", floating=False, width=221)
 
+# Remove the request counter display
+# total_remaining, hourly_remaining = get_remaining_requests()
+# st.info(f"Remaining requests: {total_remaining} total, {hourly_remaining} in the next hour")
+
 if submit_button and video_url:
+    if not check_request_limit():
+        st.error("You've reached your request limit.\nPlease clone the project and use your own OpenAI API key to continue.")
+        st.stop()
+        
     try:
         # Validate URL
         if not video_url.startswith(("https://www.youtube.com/", "https://youtu.be/")):
             st.error("Please enter a valid YouTube URL")
             st.stop()
+            
+        # Additional URL validation
+        if len(video_url) > 100:  # Reasonable max length for YouTube URLs
+            st.error("Invalid URL length")
+            st.stop()
+            
+        # Check for common URL injection patterns
+        if any(pattern in video_url.lower() for pattern in ['javascript:', 'data:', 'vbscript:', 'onload=']):
+            st.error("Invalid URL format")
+            st.stop()
+
+        # Increment request count
+        increment_request_count()
 
         # Load Transcript
         with st.spinner("Loading video transcript..."):
@@ -261,7 +344,7 @@ Here is the summary of the video:
         st.subheader("Generated Thread")
         for i, tweet in enumerate(tweets, 1):
             st.write(f"Tweet {i}:")
-            st.text_area("", tweet, key=f"tweet_{i}", disabled=True)
+            st.text_area("", tweet, key=f"tweet_{i}", disabled=True, height=120)
 
         st.write("")
         st.divider()
