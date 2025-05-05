@@ -28,4 +28,5 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-user_requests.json 
+user_requests.json
+.streamlit/ 
