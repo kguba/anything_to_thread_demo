@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta
 from langchain_community.document_loaders import YoutubeLoader
 from langchain.chains.summarize import load_summarize_chain
-from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.text_splitter import TokenTextSplitter
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
@@ -94,8 +94,12 @@ st.write("")
 st.write("Ever wanted to create a thread from a YouTube video? Now you can!")
 st.write("Simply enter your OpenAI key and the YouTube URL—then sit back and let the magic happen.")
 
+
+
+
 # Füge Divider hinzu
 st.divider()
+
 
 # URL Eingabe
 video_url = st.text_input("Enter YouTube Video URL:").strip()
@@ -140,10 +144,16 @@ with button_container:
 st.divider()
 st.write("")
 
+#button(username="kguba", floating=False, width=221)
+
+# Remove the request counter display
+# total_remaining, hourly_remaining = get_remaining_requests()
+# st.info(f"Remaining requests: {total_remaining} total, {hourly_remaining} in the next hour")
+
 if submit_button and video_url:
-    if not check_request_limit():
-        st.error("You've reached your request limit.\nPlease clone the project and use your own OpenAI API key to continue.")
-        st.stop()
+    # if not check_request_limit():
+    #     st.error("You've reached your request limit.\nPlease clone the project and use your own OpenAI API key to continue.")
+    #     st.stop()
         
     try:
         # Validate URL
@@ -169,23 +179,16 @@ if submit_button and video_url:
             try:
                 loader = YoutubeLoader.from_youtube_url(
                     video_url,
-                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"],
-                    add_video_info=True
+                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"]
                 )
                 transcript = loader.load()
                 
                 if not transcript:
-                    st.error("Could not load transcript. Please check if the video has captions enabled.")
+                    st.error("Could not load transcript. The video might not have captions available.")
                     st.stop()
                     
             except Exception as e:
                 st.error(f"Error loading transcript: {str(e)}")
-                st.write("Debug info:")
-                st.write(f"Video URL: {video_url}")
-                st.write("Please make sure:")
-                st.write("1. The video has captions enabled")
-                st.write("2. The video is publicly accessible")
-                st.write("3. The URL is correct and the video exists")
                 st.stop()
 
         # Split Transcript with smaller chunks
@@ -199,9 +202,13 @@ if submit_button and video_url:
                 st.stop()
 
         # Set up LLM
+        if not openai_key_input and not os.getenv("OPENAI_API_KEY"):
+            st.error("Please provide an OpenAI API key")
+            st.stop()
+            
         llm = ChatOpenAI(
-            api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
-            model_name="gpt-4",
+            openai_api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
+            model="gpt-4o-mini",
             temperature=0.3
         )
 
@@ -339,9 +346,20 @@ Here is the summary of the video:
         
         # Display each tweet
         st.subheader("Generated Thread")
-        for i, tweet in enumerate(tweets, 1):
-            st.write(f"Tweet {i}:")
-            st.text_area("", tweet, key=f"tweet_{i}", disabled=True, height=120)
+        for i, tweet in enumerate(tweets):
+            # Remove the numbering from the tweet text
+            tweet_text = tweet
+            if tweet.startswith(('1/', '2/', '3/', '4/', '5/', '6/', '7/', '8/', '9/', '10/')):
+                tweet_text = ' '.join(tweet.split(' ')[1:])
+            
+            # Display tweet number and content
+            if i == 0:
+                st.markdown("**First Tweet:**")
+            else:
+                st.markdown(f"**Tweet {i+1}:**")
+            
+            st.text_area("", tweet_text, key=f"tweet_{i}", disabled=True, height=100)
+            st.write("")  # Add spacing between tweets
 
         st.write("")
         st.divider()
