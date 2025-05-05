@@ -169,16 +169,23 @@ if submit_button and video_url:
             try:
                 loader = YoutubeLoader.from_youtube_url(
                     video_url,
-                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"]
+                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"],
+                    add_video_info=True
                 )
                 transcript = loader.load()
                 
                 if not transcript:
-                    st.error("Could not load transcript. The video might not have captions available.")
+                    st.error("Could not load transcript. Please check if the video has captions enabled.")
                     st.stop()
                     
             except Exception as e:
                 st.error(f"Error loading transcript: {str(e)}")
+                st.write("Debug info:")
+                st.write(f"Video URL: {video_url}")
+                st.write("Please make sure:")
+                st.write("1. The video has captions enabled")
+                st.write("2. The video is publicly accessible")
+                st.write("3. The URL is correct and the video exists")
                 st.stop()
 
         # Split Transcript with smaller chunks
