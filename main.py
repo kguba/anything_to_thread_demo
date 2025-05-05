@@ -203,8 +203,8 @@ if submit_button and video_url:
 
         # Set up LLM
         llm = ChatOpenAI(
-            openai_api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
-            model="gpt-4",
+            api_key=openai_key_input or os.getenv("OPENAI_API_KEY"),
+            model_name="gpt-4",
             temperature=0.3
         )
 
