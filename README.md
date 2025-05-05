@@ -8,8 +8,10 @@ Convert YouTube videos into engaging Twitter/X threads with AI. This tool automa
 - 🌍 Support for multiple languages (English, German, Spanish)
 - 🤖 Powered by GPT-4 for high-quality content
 - 📝 Automatic thread structuring and formatting
+- 🔒 Secure API key handling with session-based storage
 - 🎯 Smart request limiting system
 - 🎨 Clean and intuitive user interface
+- 📱 Responsive tweet display with automatic height adjustment
 
 ## 🚀 Live Demo
 
@@ -19,14 +21,19 @@ Try it out: [Anything To Thread](https://anything-to-thread.streamlit.app)
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Anything_to_thread.git
-cd Anything_to_thread
+git clone https://github.com/kguba/anything_to_thread.git
+cd anything_to_thread
 ```
 
 2. Create and activate a virtual environment:
 ```bash
+# On macOS/Linux:
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
+
+# On Windows:
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -34,34 +41,56 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the root directory and add your OpenAI API key:
-```
-OPENAI_API_KEY=your_api_key_here
+4. Set up the Streamlit configuration:
+```bash
+# Create .streamlit directory
+mkdir .streamlit
+
+# Create secrets.toml file (this will be empty, API key will be entered in the app)
+touch .streamlit/secrets.toml
 ```
 
 ## 🎮 Usage
 
-1. Run the Streamlit app:
+1. Start the application:
 ```bash
 streamlit run main.py
 ```
 
 2. Open your browser and navigate to `http://localhost:8501`
 
-3. Enter a YouTube URL and let the magic happen!
+3. Enter your OpenAI API key:
+   - The key will be securely stored in your session
+   - You'll need to re-enter it if you restart the app
+   - Your key is never stored permanently
 
-## 🔒 Security
+4. Enter a YouTube URL:
+   - The URL must be a valid YouTube video
+   - The video must have captions available
+   - The URL should be in the format: `https://www.youtube.com/watch?v=...` or `https://youtu.be/...`
 
-- API keys are stored securely in environment variables
-- Request limiting system prevents abuse
+5. Select your preferred language:
+   - 🇺🇸 English
+   - 🇩🇪 German
+   - 🇪🇸 Spanish
+
+6. Click "Submit" and wait for the magic to happen!
+
+## 🔒 Security Features
+
+- API keys are stored securely in session state
+- No persistent storage of sensitive data
 - Input validation and sanitization
-- No sensitive data is stored or logged
+- No sensitive data is logged
+- Automatic session expiration
+- Secure password field for API key input
 
 ## ⚠️ Limitations
 
 - Maximum 5 requests per user
 - Requires YouTube videos with available captions
-- OpenAI API key required for extended usage
+- OpenAI API key required for usage
+- API key needs to be re-entered after session expiration
 
 ## 🛠️ Technical Stack
 
