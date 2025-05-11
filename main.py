@@ -145,20 +145,32 @@ if submit_button and video_url:
                     try:
                         loader = YoutubeLoader.from_youtube_url(
                             video_url,
-                            language=[lang]
+                            language=[lang],
+                            add_video_info=True
                         )
                         transcript = loader.load()
-                        if transcript:
+                        if transcript and len(transcript) > 0:
                             break
-                    except Exception:
+                    except Exception as e:
                         continue
                 
-                if not transcript:
-                    st.error("Could not load transcript. Please make sure the video has captions available and try again.")
-                    st.stop()
-                    
+                if not transcript or len(transcript) == 0:
+                    # Try alternative method using youtube_transcript_api
+                    try:
+                        from youtube_transcript_api import YouTubeTranscriptApi
+                        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                        transcript = transcript_list.find_transcript(languages).fetch()
+                        if transcript:
+                            # Convert to Document format
+                            transcript = [Document(page_content=t['text']) for t in transcript]
+                    except Exception as e:
+                        st.error(f"Could not load transcript. Error: {str(e)}")
+                        st.error("Please make sure the video has captions available and try again.")
+                        st.stop()
+                
             except Exception as e:
-                st.error(f"Error loading transcript: {str(e)}\nPlease make sure the video has captions available and the URL is correct.")
+                st.error(f"Error loading transcript: {str(e)}")
+                st.error("Please make sure the video has captions available and the URL is correct.")
                 st.stop()
 
         # Split Transcript with smaller chunks
