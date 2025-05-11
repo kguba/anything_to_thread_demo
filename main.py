@@ -131,24 +131,33 @@ if submit_button and video_url:
                 ]
                 
                 transcript = None
+                last_error = None
+                
                 for lang_set in languages:
                     try:
+                        st.write(f"Trying to load transcript with languages: {lang_set}")
                         loader = YoutubeLoader.from_youtube_url(
                             video_url,
-                            language=lang_set
+                            language=lang_set,
+                            add_video_info=True
                         )
                         transcript = loader.load()
                         if transcript:
+                            st.success(f"Successfully loaded transcript with languages: {lang_set}")
                             break
-                    except Exception:
+                    except Exception as e:
+                        last_error = str(e)
+                        st.write(f"Failed to load with languages {lang_set}: {str(e)}")
                         continue
                 
                 if not transcript:
-                    st.error("""
+                    st.error(f"""
                     Could not load transcript. This could be due to:
                     1. The video has no captions/subtitles
                     2. The captions are disabled
                     3. The video is private or restricted
+                    
+                    Last error: {last_error}
                     
                     Please try a different video with available captions.
                     """)
