@@ -14,6 +14,11 @@ from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
 from chuck_norris_jokes import get_random_joke
 import requests
+import logging
+
+# Konfiguriere das Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize session state for language and used jokes
 if 'selected_language' not in st.session_state:
@@ -122,48 +127,20 @@ if submit_button and video_url:
         # Load Transcript
         with st.spinner("Loading video transcript..."):
             try:
-                # Try multiple language combinations
-                languages = [
-                    ["en", "en-US", "de", "de-DE", "es", "es-ES"],
-                    ["en", "en-US"],
-                    ["de", "de-DE"],
-                    ["es", "es-ES"]
-                ]
-                
-                transcript = None
-                last_error = None
-                
-                for lang_set in languages:
-                    try:
-                        st.write(f"Trying to load transcript with languages: {lang_set}")
-                        loader = YoutubeLoader.from_youtube_url(
-                            video_url,
-                            language=lang_set,
-                            add_video_info=True
-                        )
-                        transcript = loader.load()
-                        if transcript:
-                            st.success(f"Successfully loaded transcript with languages: {lang_set}")
-                            break
-                    except Exception as e:
-                        last_error = str(e)
-                        st.write(f"Failed to load with languages {lang_set}: {str(e)}")
-                        continue
+                logger.info(f"Attempting to load transcript for URL: {video_url}")
+                loader = YoutubeLoader.from_youtube_url(
+                    video_url,
+                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"]
+                )
+                transcript = loader.load()
                 
                 if not transcript:
-                    st.error(f"""
-                    Could not load transcript. This could be due to:
-                    1. The video has no captions/subtitles
-                    2. The captions are disabled
-                    3. The video is private or restricted
-                    
-                    Last error: {last_error}
-                    
-                    Please try a different video with available captions.
-                    """)
+                    logger.error("Could not load transcript. The video might not have captions available.")
+                    st.error("Could not load transcript. The video might not have captions available.")
                     st.stop()
                     
             except Exception as e:
+                logger.error(f"Error loading transcript: {str(e)}")
                 st.error(f"Error loading transcript: {str(e)}")
                 st.stop()
 
