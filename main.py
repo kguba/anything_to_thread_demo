@@ -173,11 +173,9 @@ if submit_button and video_url:
 
         # Set up LLM
         llm = ChatOpenAI(
+            model_name="gpt-4o-mini",
             openai_api_key=st.session_state.api_key,
-            model="gpt-4o-mini",
-            temperature=0.3,
-            request_timeout=120,
-            streaming=True
+            temperature=0.3
         )
 
         # Create progress bar
