@@ -4,11 +4,11 @@ import time
 import pyperclip
 import json
 from datetime import datetime, timedelta
-from langchain.document_loaders import YoutubeLoader
-from langchain.chains.summarize import load_summarize_chain
-from langchain.chat_models import ChatOpenAI
+from langchain_community.document_loaders import YoutubeLoader
+from langchain_community.chat_models import ChatOpenAI
 from langchain.text_splitter import TokenTextSplitter
 from langchain.prompts import PromptTemplate
+from langchain.chains.summarize import load_summarize_chain
 from dotenv import load_dotenv
 from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
