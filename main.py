@@ -127,50 +127,116 @@ if submit_button and video_url:
 
         # Load Transcript
         with st.spinner("Loading video transcript..."):
+            st.info("Attempting to load transcript...")
+            video_id = None
             try:
                 # Extract video ID from URL
+                st.info(f"Extracting video ID from URL: {video_url}")
                 if "youtu.be" in video_url:
                     video_id = video_url.split("/")[-1].split("?")[0]
                 elif "youtube.com" in video_url:
                     video_id = video_url.split("v=")[1].split("&")[0]
                 else:
                     st.error("Invalid YouTube URL format")
+                    st.info("Error: Invalid YouTube URL format during video_id extraction.")
                     st.stop()
+                st.info(f"Extracted video ID: {video_id}")
 
-                # Try to load transcript with multiple language attempts
+                # Try to load transcript with multiple language attempts using YoutubeLoader
                 transcript = None
-                languages = ["en", "en-US", "de", "de-DE", "es", "es-ES"]
+                languages_to_try = ["en", "en-US", "de", "de-DE", "es", "es-ES"] # More explicit naming
+                st.info(f"Attempting to load with YoutubeLoader for languages: {languages_to_try}")
                 
-                for lang in languages:
+                for lang_code in languages_to_try: # More explicit naming
+                    st.info(f"YoutubeLoader: Trying language '{lang_code}'...")
                     try:
                         loader = YoutubeLoader.from_youtube_url(
                             video_url,
-                            language=[lang],
+                            language=[lang_code], # YoutubeLoader expects a list
                             add_video_info=True
                         )
-                        transcript = loader.load()
-                        if transcript and len(transcript) > 0:
-                            break
-                    except Exception as e:
-                        continue
+                        transcript_docs = loader.load() # More explicit naming
+                        if transcript_docs and len(transcript_docs) > 0:
+                            st.info(f"YoutubeLoader: Successfully loaded transcript in '{lang_code}'. Content preview: {transcript_docs[0].page_content[:100]}")
+                            transcript = transcript_docs # Assign if successful
+                            break 
+                    except Exception as e_loader:
+                        st.info(f"YoutubeLoader: Failed for language '{lang_code}'. Error: {str(e_loader)}")
+                        continue # Continue to next language
                 
                 if not transcript or len(transcript) == 0:
-                    # Try alternative method using youtube_transcript_api
+                    st.info("YoutubeLoader failed for all languages or returned empty transcript.")
+                    st.info("Attempting fallback with youtube_transcript_api...")
                     try:
-                        from youtube_transcript_api import YouTubeTranscriptApi
-                        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                        transcript = transcript_list.find_transcript(languages).fetch()
-                        if transcript:
+                        from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+                        
+                        st.info(f"youtube_transcript_api: Fetching list of available transcripts for video ID: {video_id}")
+                        transcript_list_api = YouTubeTranscriptApi.list_transcripts(video_id) # More explicit naming
+                        st.info(f"youtube_transcript_api: Available transcripts: {[t.language for t in transcript_list_api]}")
+
+                        fetched_transcript_data = None # More explicit naming
+                        # Try to find and fetch in preferred order
+                        for lang_code_api in languages_to_try:
+                             st.info(f"youtube_transcript_api: Trying to find and fetch transcript for language '{lang_code_api}'...")
+                             try:
+                                 target_transcript = transcript_list_api.find_transcript([lang_code_api]) # find_transcript expects a list
+                                 st.info(f"youtube_transcript_api: Found transcript for '{target_transcript.language}', fetching...")
+                                 fetched_transcript_data = target_transcript.fetch()
+                                 if fetched_transcript_data:
+                                     st.info(f"youtube_transcript_api: Successfully fetched transcript in '{target_transcript.language}'.")
+                                     break
+                             except NoTranscriptFound:
+                                 st.info(f"youtube_transcript_api: No transcript found for '{lang_code_api}'.")
+                                 continue
+                        
+                        if fetched_transcript_data:
+                            st.info(f"youtube_transcript_api: Converting fetched data to Document format. Preview: {str(fetched_transcript_data)[:200]}")
                             # Convert to Document format
-                            transcript = [Document(page_content=t['text']) for t in transcript]
-                    except Exception as e:
-                        st.error(f"Could not load transcript. Error: {str(e)}")
-                        st.error("Please make sure the video has captions available and try again.")
+                            transcript = [Document(page_content=t_item['text']) for t_item in fetched_transcript_data] # More explicit naming
+                            if not transcript:
+                                st.info("youtube_transcript_api: Conversion to Document format resulted in empty list.")
+                        else:
+                            st.info("youtube_transcript_api: Failed to fetch transcript in any of the preferred languages.")
+                            # If specific languages failed, try to fetch any available generated transcript as a last resort
+                            st.info("youtube_transcript_api: Attempting to fetch any available generated transcript as a last resort...")
+                            try:
+                                for available_transcript_obj in transcript_list_api:
+                                    if available_transcript_obj.is_generated:
+                                        st.info(f"youtube_transcript_api: Found generated transcript in '{available_transcript_obj.language}', fetching...")
+                                        fetched_transcript_data = available_transcript_obj.fetch()
+                                        if fetched_transcript_data:
+                                            st.info(f"youtube_transcript_api: Successfully fetched generated transcript in '{available_transcript_obj.language}'.")
+                                            transcript = [Document(page_content=t_item['text']) for t_item in fetched_transcript_data]
+                                            break
+                                if not transcript:
+                                     st.info("youtube_transcript_api: No generated transcripts could be fetched.")
+                            except Exception as e_generated_fallback:
+                                st.info(f"youtube_transcript_api: Error during generated transcript fallback: {str(e_generated_fallback)}")
+
+
+                    except TranscriptsDisabled:
+                        st.error(f"Could not load transcript for video {video_url}. Subtitles are disabled for this video.")
+                        st.info(f"youtube_transcript_api: TranscriptsDisabled error for video ID {video_id}.")
                         st.stop()
+                    except NoTranscriptFound:
+                        st.error(f"Could not load transcript for video {video_url}. No transcript found in the available languages.")
+                        st.info(f"youtube_transcript_api: NoTranscriptFound error for video ID {video_id} in languages {languages_to_try}.")
+                        st.stop()
+                    except Exception as e_api_fallback:
+                        st.error(f"Could not load transcript using youtube_transcript_api. Error: {str(e_api_fallback)}")
+                        st.info(f"youtube_transcript_api: General error for video ID {video_id}. Error: {str(e_api_fallback)}")
+                        st.stop()
+
+                if not transcript or len(transcript) == 0:
+                    st.error(f"Failed to load transcript for video {video_url} after all attempts.")
+                    st.info("All transcript loading methods failed or returned empty.")
+                    st.stop()
                 
-            except Exception as e:
-                st.error(f"Error loading transcript: {str(e)}")
-                st.error("Please make sure the video has captions available and the URL is correct.")
+                st.info("Transcript loaded successfully.")
+
+            except Exception as e_outer: # Outer try-except for unexpected errors
+                st.error(f"An unexpected error occurred during transcript loading: {str(e_outer)}")
+                st.info(f"Outer try-except block error during transcript loading: {str(e_outer)}")
                 st.stop()
 
         # Split Transcript with smaller chunks
