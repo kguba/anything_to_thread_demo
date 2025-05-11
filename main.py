@@ -185,7 +185,7 @@ if submit_button and video_url:
 
         # Set up LLM
         llm = ChatOpenAI(
-            model_name="gpt-4",
+            model_name="gpt-3.5-turbo",
             openai_api_key=st.session_state.api_key,
             temperature=0.3
         )
