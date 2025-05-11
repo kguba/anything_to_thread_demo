@@ -41,6 +41,15 @@ st.write("")
 
 st.write("Ever wanted to create a thread from a YouTube video? Now you can!")
 st.write("Simply enter your OpenAI key and the YouTube URL—then sit back and let the magic happen.")
+st.write("")
+# Add warning message
+st.warning("""
+⚠️ **Demo Version Warning**
+
+This is only for demo purposes. For further usage please use your own OpenAI API key.
+
+Every user has up to 10 free anything-to-tweet submissions.
+""")
 
 # Füge Divider hinzu
 st.divider()
@@ -50,21 +59,15 @@ video_url = st.text_input("Enter YouTube Video URL:").strip()
 st.write("")
 
 # API Key Handling
-if not st.secrets["openai_api_key"]:
+if 'openai_api_key' in st.secrets:
+    st.session_state.api_key = st.secrets['openai_api_key']
+    st.success("Using API key from configuration")
+else:
     openai_key_input = st.text_input("Enter Your OpenAI Key:", type="password")
     if openai_key_input:
         # Store the API key in session state
         st.session_state.api_key = openai_key_input
         st.success("API key stored in session!")
-else:
-    # Show option to change API key
-    if st.button("Change API Key"):
-        st.session_state.api_key = None
-        st.rerun()
-    
-    # Use stored API key from session state or secrets
-    st.session_state.api_key = st.session_state.api_key or st.secrets["openai_api_key"]
-    st.success("Using stored API key")
 
 st.write("")
 st.write("")
@@ -290,6 +293,8 @@ Here is the input summary of the video to base your thread on:
                     # Remove tweet numbering and clean up
                     tweet = part.split(')')[-1].strip()
                     if tweet:
+                        # Replace {url} with actual video URL
+                        tweet = tweet.replace("{url}", video_url)
                         tweets.append(tweet)
             
         except Exception as e:
