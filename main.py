@@ -14,6 +14,8 @@ from streamlit_extras.buy_me_a_coffee import button
 from langchain.schema import Document
 from chuck_norris_jokes import get_random_joke
 import requests
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api.requests_client import RequestsClient
 
 # Initialize session state for language and used jokes
 if 'selected_language' not in st.session_state:
@@ -125,6 +127,14 @@ if submit_button and video_url:
             st.error("Please provide an OpenAI API key")
             st.stop()
 
+        USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        custom_headers = {'User-Agent': USER_AGENT}
+        st.info(f"Using custom User-Agent: {USER_AGENT}")
+        # Create a reusable RequestsClient for youtube_transcript_api
+        yt_api_custom_http_client = RequestsClient(headers=custom_headers)
+        # Create a reusable YouTubeTranscriptApi client instance
+        yt_api_custom_client_instance = YouTubeTranscriptApi(http_client=yt_api_custom_http_client)
+
         # Load Transcript
         with st.spinner("Loading video transcript..."):
             st.info("Attempting to load transcript...")
@@ -153,7 +163,8 @@ if submit_button and video_url:
                         loader = YoutubeLoader.from_youtube_url(
                             video_url,
                             language=[lang_code], # YoutubeLoader expects a list
-                            add_video_info=True
+                            add_video_info=True,
+                            yt_transcript_api_client=yt_api_custom_client_instance # Pass the custom client
                         )
                         transcript_docs = loader.load() # More explicit naming
                         if transcript_docs and len(transcript_docs) > 0:
@@ -168,10 +179,11 @@ if submit_button and video_url:
                     st.info("YoutubeLoader failed for all languages or returned empty transcript.")
                     st.info("Attempting fallback with youtube_transcript_api...")
                     try:
-                        from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+                        # from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound # Moved to top
                         
-                        st.info(f"youtube_transcript_api: Fetching list of available transcripts for video ID: {video_id}")
-                        transcript_list_api = YouTubeTranscriptApi.list_transcripts(video_id) # More explicit naming
+                        st.info(f"youtube_transcript_api: Fetching list of available transcripts for video ID: {video_id} using custom User-Agent.")
+                        # Use the pre-configured yt_api_custom_client_instance
+                        transcript_list_api = yt_api_custom_client_instance.list_transcripts(video_id)
                         st.info(f"youtube_transcript_api: Available transcripts: {[t.language for t in transcript_list_api]}")
 
                         fetched_transcript_data = None # More explicit naming
