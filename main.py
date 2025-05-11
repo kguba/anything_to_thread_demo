@@ -59,16 +59,6 @@ video_url = st.text_input("Enter YouTube Video URL:").strip()
 st.write("")
 
 # API Key Handling
-if 'openai' in st.secrets and 'api_key' in st.secrets.openai:
-    st.session_state.api_key = st.secrets.openai.api_key
-    st.success("Using API key from configuration")
-else:
-    openai_key_input = st.text_input("Enter Your OpenAI Key:", type="password")
-    if openai_key_input:
-        # Store the API key in session state
-        st.session_state.api_key = openai_key_input
-        st.success("API key stored in session!")
-
 st.write("")
 st.write("")
 st.write("")
@@ -95,6 +85,14 @@ with col4:
         st.session_state.selected_language = 'es'
         st.rerun()
 st.write("")
+
+# API Key Input
+openai_key_input = st.text_input("Enter Your OpenAI Key:", type="password")
+if openai_key_input:
+    # Store the API key in session state
+    st.session_state.api_key = openai_key_input
+    st.success("API key stored in session!")
+
 # Create container for button
 button_container = st.container()
 
@@ -120,6 +118,11 @@ if submit_button and video_url:
         # Check for common URL injection patterns
         if any(pattern in video_url.lower() for pattern in ['javascript:', 'data:', 'vbscript:', 'onload=']):
             st.error("Invalid URL format")
+            st.stop()
+
+        # Check for API key
+        if not st.session_state.api_key:
+            st.error("Please provide an OpenAI API key")
             st.stop()
 
         # Load Transcript
@@ -169,10 +172,6 @@ if submit_button and video_url:
                 st.stop()
 
         # Set up LLM
-        if not st.session_state.api_key:
-            st.error("Please provide an OpenAI API key")
-            st.stop()
-            
         llm = ChatOpenAI(
             openai_api_key=st.session_state.api_key,
             model="gpt-4o-mini",
