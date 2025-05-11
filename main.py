@@ -59,8 +59,8 @@ video_url = st.text_input("Enter YouTube Video URL:").strip()
 st.write("")
 
 # API Key Handling
-if 'openai_api_key' in st.secrets:
-    st.session_state.api_key = st.secrets['openai_api_key']
+if 'openai' in st.secrets and 'api_key' in st.secrets.openai:
+    st.session_state.api_key = st.secrets.openai.api_key
     st.success("Using API key from configuration")
 else:
     openai_key_input = st.text_input("Enter Your OpenAI Key:", type="password")
@@ -176,7 +176,8 @@ if submit_button and video_url:
         llm = ChatOpenAI(
             openai_api_key=st.session_state.api_key,
             model="gpt-4o-mini",
-            temperature=0.3
+            temperature=0.3,
+            request_timeout=120
         )
 
         # Create progress bar
