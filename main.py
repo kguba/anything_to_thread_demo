@@ -122,18 +122,37 @@ if submit_button and video_url:
         # Load Transcript
         with st.spinner("Loading video transcript..."):
             try:
-                loader = YoutubeLoader.from_youtube_url(
-                    video_url,
-                    language=["en", "en-US", "de", "de-DE", "es", "es-ES"]
-                )
-                transcript = loader.load()
+                # Extract video ID from URL
+                if "youtu.be" in video_url:
+                    video_id = video_url.split("/")[-1].split("?")[0]
+                elif "youtube.com" in video_url:
+                    video_id = video_url.split("v=")[1].split("&")[0]
+                else:
+                    st.error("Invalid YouTube URL format")
+                    st.stop()
+
+                # Try to load transcript with multiple language attempts
+                transcript = None
+                languages = ["en", "en-US", "de", "de-DE", "es", "es-ES"]
+                
+                for lang in languages:
+                    try:
+                        loader = YoutubeLoader.from_youtube_url(
+                            video_url,
+                            language=[lang]
+                        )
+                        transcript = loader.load()
+                        if transcript:
+                            break
+                    except Exception:
+                        continue
                 
                 if not transcript:
-                    st.error("Could not load transcript. The video might not have captions available.")
+                    st.error("Could not load transcript. Please make sure the video has captions available and try again.")
                     st.stop()
                     
             except Exception as e:
-                st.error(f"Error loading transcript: {str(e)}")
+                st.error(f"Error loading transcript: {str(e)}\nPlease make sure the video has captions available and the URL is correct.")
                 st.stop()
 
         # Split Transcript with smaller chunks
@@ -184,52 +203,57 @@ if submit_button and video_url:
                 summary = summarize_chain.run([chunk, summary_doc])
 
         # Thread-Erstellung mit dem System-Prompt
-        system_prompt = """You are an expert at creating viral X (Twitter) threads that engage and inform your audience.
+        system_prompt = """You are an expert at creating viral X (formerly Twitter) threads that engage and inform your audience.
 Your task is to create a compelling thread based on the summary of a YouTube video.
 
-First, provide a concise summary of the video in 2-3 sentences. Then create the thread.
+First, provide a concise summary of the video in 2-3 sentences. This summary should be different from the input summary and act as an intro.
+Then create the thread based on the **input summary** provided below.
 
 Thread Requirements:
 1. Structure:
-   - First tweet: Start with a powerful hook or thought-provoking question, end with "…🧵"
-   - First tweet: Doesnt have a number in the beginning
-   - Second tweet onwards: Number them (2/5), (3/5), etc.
-   - Last tweet: Strong call-to-action and video URL: {url}
+   - First tweet: Start with a powerful hook or thought-provoking question. End with "…🧵" or a similar threading emoji.
+   - First tweet: Must NOT have a number like (1/N) at the beginning.
+   - Second tweet onwards: Number them clearly, e.g., (2/7), (3/7), etc. The total N should reflect the actual number of tweets in this segment.
+   - Last tweet: Include a strong call-to-action and the placeholder for the video URL: {{url}} (the app will replace this).
 
 2. Content Guidelines:
-   - Extract and explain the main arguments
-   - Include specific examples and key points
-   - Highlight unique perspectives and insights
-   - Add 3-5 practical takeaways
-   - Discuss broader context and implications
-   - Make it comprehensive for those who haven't seen the video
+   - Extract and explain the main arguments from the input summary.
+   - Include specific examples and key points if present in the input summary.
+   - Highlight unique perspectives and insights.
+   - Aim for 3-5 practical takeaways if applicable.
+   - Discuss broader context and implications if relevant.
+   - Make it comprehensive enough for someone who hasn't seen the video but read the input summary.
 
 3. Technical Rules:
-   - Each tweet must be ≤280 characters
-   - Maximum 2 emojis total (use only when they add value)
-   - Vary sentence structure
-   - Keep every tweet attention-grabbing
-   - Avoid filler content
+   - Each tweet must be STRICTLY ≤ 280 characters.
+   - Use a maximum of 2-3 relevant emojis in the ENTIRE thread (use them only when they add significant value).
+   - Vary sentence structure for better readability.
+   - Ensure every tweet is attention-grabbing and adds value.
+   - Avoid filler content or overly verbose sentences.
 
 4. Style:
-   - Use an engaging, conversational tone
-   - Include specific examples and data points
-   - Make complex ideas accessible
-   - Create a narrative flow between tweets
-   - Dont write "the person", "write the youtuber"
+   - Use an engaging, conversational, yet informative tone.
+   - If the video summary mentions "the YouTuber" or a specific name, use that. Otherwise, terms like "the creator" or "the video" are fine.
+   - Make complex ideas accessible.
+   - Create a clear narrative flow between tweets.
 
 5. Language:
-   - Create the thread in {language}
+   - The ENTIRE output (summary and thread) must be in **{language}**.
 
-Format your response exactly like this:
+Format your response EXACTLY like this, with "SUMMARY:" and "THREAD:" as markers:
 SUMMARY:
-[Your 2-3 sentence summary here]
+[Your NEW 2-3 sentence introductory summary here]
 
 THREAD:
-[Your thread here]
+[Tweet 1: Hook... 🧵]
+[Tweet 2: (2/N) Content...]
+[Tweet 3: (3/N) Content...]
+...
+[Tweet N: (N/N) Call to action with {{url}}]
 
-Here is the summary of the video:
-{summary}"""
+Here is the input summary of the video to base your thread on:
+{summary}
+"""
 
         # Thread-Erstellung mit dem System-Prompt
         prompt = PromptTemplate(
@@ -258,39 +282,17 @@ Here is the summary of the video:
             
             # Split thread into individual tweets
             tweets = []
-            current_tweet = ""
             
-            # First, split by newlines and clean up
-            lines = [line.strip() for line in thread_part.split('\n') if line.strip()]
-            
-            for line in lines:
-                # Check if this line starts a new tweet (either with a number or is the first tweet)
-                if (line.startswith(('1/', '2/', '3/', '4/', '5/', '6/', '7/', '8/', '9/', '10/')) or 
-                    (not current_tweet and not any(line.startswith(str(i)+'/') for i in range(1, 11)))):
-                    # Save previous tweet if exists
-                    if current_tweet:
-                        tweets.append(current_tweet.strip())
-                    current_tweet = line
-                else:
-                    # Continue with current tweet
-                    current_tweet += " " + line
-            
-            # Add the last tweet if exists
-            if current_tweet:
-                tweets.append(current_tweet.strip())
-            
-            # Clean up tweets (remove numbering from the beginning)
-            cleaned_tweets = []
-            for tweet in tweets:
-                # Remove numbering pattern like "1/5", "2/5", etc.
-                if any(tweet.startswith(f"{i}/") for i in range(1, 11)):
-                    tweet = ' '.join(tweet.split(' ')[1:])
-                cleaned_tweets.append(tweet.strip())
-            
-            tweets = cleaned_tweets
+            # Split by tweet markers (1/, 2/, etc.)
+            parts = thread_part.split('(')
+            for part in parts:
+                if part.strip():
+                    # Remove tweet numbering and clean up
+                    tweet = part.split(')')[-1].strip()
+                    if tweet:
+                        tweets.append(tweet)
             
         except Exception as e:
-            # Fallback if the format is not as expected
             st.error(f"Error processing thread format: {str(e)}")
             summary_part = summary
             tweets = [thread_part]
@@ -305,21 +307,17 @@ Here is the summary of the video:
         st.write(summary_part)
         st.divider()
         
-        # Display each tweet
+        # Display each tweet in its own text field
         st.subheader("Generated Thread")
         for i, tweet in enumerate(tweets):
-            # Calculate appropriate height based on tweet length
-            # Assuming average of 50 characters per line and 20px per line
-            num_lines = len(tweet) // 50 + 1
-            height = max(68, min(200, num_lines * 20))  # Min 68px (Streamlit requirement), max 200px
-            
-            # Display tweet number and content
-            if i == 0:
-                st.markdown("**First Tweet:**")
-            else:
-                st.markdown(f"**Tweet {i+1}:**")
-            
-            st.text_area("", tweet, key=f"tweet_{i}", disabled=True, height=height)
+            # Create a text area for the tweet
+            st.text_area(
+                label=f"Tweet {i+1}",
+                value=tweet,
+                key=f"tweet_{i}",
+                disabled=True,
+                height=100
+            )
             st.write("")  # Add spacing between tweets
 
         st.write("")

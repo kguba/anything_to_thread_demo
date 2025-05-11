@@ -1,4 +1,4 @@
-#!/Users/konstantin/Documents/Python_Projects/Anything_to_thread/.venv/bin/python
+#!/Users/konstantin/Documents/Python_Projects/Anything_to_thread_DEMO/anything_to_thread/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

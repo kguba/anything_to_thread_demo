@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="/Users/konstantin/Documents/Python_Projects/Anything_to_thread/.venv"
+VIRTUAL_ENV="/Users/konstantin/Documents/Python_Projects/Anything_to_thread_DEMO/anything_to_thread/.venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
