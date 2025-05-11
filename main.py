@@ -176,7 +176,8 @@ if submit_button and video_url:
             openai_api_key=st.session_state.api_key,
             model="gpt-4o-mini",
             temperature=0.3,
-            request_timeout=120
+            request_timeout=120,
+            streaming=True
         )
 
         # Create progress bar
