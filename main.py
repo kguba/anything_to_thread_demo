@@ -4,9 +4,9 @@ import time
 import pyperclip
 import json
 from datetime import datetime, timedelta
-from langchain_community.document_loaders import YoutubeLoader
+from langchain.document_loaders import YoutubeLoader
 from langchain.chains.summarize import load_summarize_chain
-from langchain_community.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.text_splitter import TokenTextSplitter
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
@@ -185,7 +185,7 @@ if submit_button and video_url:
 
         # Set up LLM
         llm = ChatOpenAI(
-            model_name="gpt-4o-mini",
+            model_name="gpt-4",
             openai_api_key=st.session_state.api_key,
             temperature=0.3
         )
